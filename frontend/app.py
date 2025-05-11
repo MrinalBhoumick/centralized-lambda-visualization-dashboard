@@ -27,14 +27,17 @@ if uploaded_file:
             # Extract metric columns (exclude 'Function Name')
             metric_columns = [col for col in df.columns if col != "Function Name"]
 
+            # Filter out non-numeric columns for summary statistics
+            numeric_columns = df[metric_columns].select_dtypes(include=[np.number]).columns.tolist()
+
             st.markdown("### 📈 Select Metric(s) to Plot Against Function Name")
-            selected_metrics = st.multiselect("Select Metrics", options=metric_columns, default=[metric_columns[0]])
+            selected_metrics = st.multiselect("Select Metrics", options=numeric_columns, default=[numeric_columns[0]])
 
             st.markdown("### 🔍 Filter by Lambda Functions (Optional)")
             function_options = sorted(df["Function Name"].unique().tolist())
 
-            # Allow the user to select multiple functions for comparison
-            selected_functions = st.multiselect("Select Lambda Functions for Comparison", options=function_options, default=function_options)
+            # Allow the user to select multiple functions for comparison, no default selection
+            selected_functions = st.multiselect("Select Lambda Functions for Comparison", options=function_options)
 
             if len(selected_functions) == 0:
                 st.warning("Please select at least one Lambda function for comparison.")
