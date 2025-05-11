@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IAM Role for API Gateway to invoke a Lambda function
+
+Parameters:
+  LambdaFunctionArn:
+    Type: String
+    Description: ARN of the Lambda function to allow invocation
+
+Resources:
+  ApiGatewayInvokeLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ApiGatewayInvokeLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Ref LambdaFunctionArn
+
+Outputs:
+  RoleArn:
+    Description: ARN of the IAM Role
+    Value: !GetAtt ApiGatewayInvokeLambdaRole.Arn
