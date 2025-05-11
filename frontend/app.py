@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np
 
 # Page setup
 st.set_page_config(page_title="Lambda Report Dashboard", layout="wide")
@@ -26,32 +27,74 @@ if uploaded_file:
             # Extract metric columns (exclude 'Function Name')
             metric_columns = [col for col in df.columns if col != "Function Name"]
 
-            st.markdown("### 📈 Select a Metric to Plot Against Function Name")
-            selected_metric = st.selectbox("Metric", options=metric_columns)
+            st.markdown("### 📈 Select Metric(s) to Plot Against Function Name")
+            selected_metrics = st.multiselect("Select Metrics", options=metric_columns, default=[metric_columns[0]])
 
-            st.markdown("### 🔍 Filter by Lambda Function (Optional)")
-            function_options = ["All Functions"] + sorted(df["Function Name"].unique().tolist())
-            selected_function = st.selectbox("Function Name", options=function_options)
+            st.markdown("### 🔍 Filter by Lambda Functions (Optional)")
+            function_options = sorted(df["Function Name"].unique().tolist())
 
-            # Apply filter if a specific function is selected
-            if selected_function != "All Functions":
-                filtered_df = df[df["Function Name"] == selected_function]
+            # Allow the user to select multiple functions for comparison
+            selected_functions = st.multiselect("Select Lambda Functions for Comparison", options=function_options, default=function_options)
+
+            if len(selected_functions) == 0:
+                st.warning("Please select at least one Lambda function for comparison.")
             else:
-                filtered_df = df
+                # Filter data for selected functions
+                filtered_df = df[df["Function Name"].isin(selected_functions)]
 
-            if filtered_df.empty:
-                st.warning("No data available for the selected function.")
-            else:
-                # Plot bar chart
-                fig = px.bar(
-                    filtered_df,
-                    x="Function Name",
-                    y=selected_metric,
-                    title=f"{selected_metric} by Function Name",
-                    labels={"Function Name": "Lambda Function", selected_metric: selected_metric},
-                    color="Function Name"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                if filtered_df.empty:
+                    st.warning("No data available for the selected functions.")
+                else:
+                    # Show statistics for selected metric(s)
+                    st.markdown("### 🧮 Summary Statistics")
+                    summary_stats = filtered_df[selected_metrics].describe().T
+                    summary_stats['range'] = summary_stats['max'] - summary_stats['min']
+                    st.dataframe(summary_stats)
+
+                    # Plot bar chart with selected functions for comparison
+                    for metric in selected_metrics:
+                        fig = px.bar(
+                            filtered_df,
+                            x="Function Name",
+                            y=metric,
+                            title=f"{metric} by Lambda Function",
+                            labels={"Function Name": "Lambda Function", metric: metric},
+                            color="Function Name",  # To distinguish different functions by color
+                            barmode="group",  # Display bars next to each other for comparison
+                            hover_data=["Function Name", metric]  # Show details on hover
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    # Add scatter plot option for comparison
+                    if len(selected_metrics) == 2:
+                        st.markdown("### 🔄 Scatter Plot for Metric Comparison")
+                        scatter_fig = px.scatter(
+                            filtered_df,
+                            x=selected_metrics[0],
+                            y=selected_metrics[1],
+                            color="Function Name",
+                            title=f"Scatter Plot of {selected_metrics[0]} vs {selected_metrics[1]}",
+                            labels={selected_metrics[0]: selected_metrics[0], selected_metrics[1]: selected_metrics[1]},
+                            hover_data=["Function Name"]
+                        )
+                        st.plotly_chart(scatter_fig, use_container_width=True)
+
+                    # Export the filtered data as CSV
+                    st.markdown("### 📤 Export Data")
+                    csv = filtered_df.to_csv(index=False)
+                    st.download_button(
+                        label="Download Data as CSV",
+                        data=csv,
+                        file_name="filtered_lambda_data.csv",
+                        mime="text/csv"
+                    )
+
+                    # Export the most recent plot as PNG (if desired)
+                    st.markdown("### 📷 Export Chart as PNG")
+                    export_png_button = st.button("Download Latest Chart as PNG")
+                    if export_png_button:
+                        fig.write_image("chart.png")
+                        st.image("chart.png")
 
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
