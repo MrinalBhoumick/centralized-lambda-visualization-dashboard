@@ -14,11 +14,10 @@ logger.setLevel(logging.INFO)
 
 MAX_RETRIES = 5
 RETRY_SLEEP = 1
-MAX_CONCURRENT_TASKS = 10  # Limit the number of concurrent tasks
+MAX_CONCURRENT_TASKS = 10
 BATCH_SIZE = 500
 
 def lambda_handler(event, context):
-    # Run the asynchronous logic inside a blocking function
     return asyncio.run(handle_event(event, context))
 
 async def handle_event(event, context):
